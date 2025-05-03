@@ -31,37 +31,34 @@ Primijenjen je pristup **transfernog učenja (transfer learning)**:
 
 Proces treniranja uključivao je pažljiv odabir hiperparametara i tehnika:
 
-**Augmentacija podataka**: Kako bi se smanjila prenaučenost (overfitting), posebno zbog višestrukog korištenja malignih uzoraka, primijenjene su intenzivne augmentacije podataka pomoću biblioteke Albumentations. Korištene transformacije uključivale su (s primjerima vjerojatnosti primjene p):
-- ○	Geometrijske: Transpozicija (p=0.5), vertikalno (p=0.5) i horizontalno zrcaljenje (p=0.5), nasumična rotacija, skaliranje i pomak (ShiftScaleRotate, p=0.85), optička distorzija (p=0.7), distorzija mreže (GridDistortion, p=0.7), elastična transformacija (ElasticTransform, p=0.7).
-- Promjene boja i kontrasta
-- Dodavanje šuma
-- Regularizacijske tehnike
+**Augmentacija podataka:** Kako bi se smanjila prenaučenost (overfitting), posebno zbog višestrukog korištenja malignih uzoraka, primijenjene su intenzivne augmentacije podataka pomoću biblioteke Albumentations. Korištene transformacije uključivale su (s primjerima vjerojatnosti primjene p):
+- Geometrijske: Transpozicija (p=0.5), vertikalno (p=0.5) i horizontalno zrcaljenje (p=0.5), nasumična rotacija, skaliranje i pomak (ShiftScaleRotate, p=0.85), optička distorzija (p=0.7), distorzija mreže (GridDistortion, p=0.7), elastična transformacija (ElasticTransform, p=0.7).
+- Boja i Kontrast: Nasumične promjene svjetline i kontrasta (RandomBrightnessContrast, p=0.75), promjene nijanse, zasićenosti i osvjetljenja (HueSaturationValue, p=0.5), adaptivno izjednačavanje histograma (CLAHE, p=0.7).
+- Zamućenje i Šum: Različite vrste zamućenja (Motion, Median, Gaussian) ili Gaussov šum (p=0.7).
+- Regularizacija: Izrezivanje većih ili manjih pravokutnih dijelova slike (CoarseDropout, p=1.0).
+- Sve slike su prije ulaska u model skalirane na definiranu veličinu (image_size) i normalizirane.
 
-**Funkcije gubitka:**
-- BCEWithLogitsLoss
-- Focal Loss
+**Funkcije gubitka (Loss Functions):** Za mjerenje pogreške modela korištene su BCEWithLogitsLoss (standardna i numerički stabilna funkcija za binarnu klasifikaciju) i Focal Loss (posebno korisna kod neuravnoteženih skupova jer daje veću težinu primjerima koje model teško klasificira, često onima iz manjinske klase).
 
-**Optimizatori:**
-- AdamW
-- SGD s momentumom
+**Optimizatori i Stopa Učenja (Learning Rate):** Eksperimentiralo se s različitim optimizatorima, uključujući **AdamW** i **SGD s momentumom**. Isprobane su različite strategije za prilagodbu stope učenja tijekom treniranja: konstanta stopa, **OneCycleLR**, **Cosine Annealing** i **ReduceLROnPlateau** (smanjenje stope učenja kada se metrika na validacijskom skupu prestane poboljšavati). Primijenjene su **diferencijalne stope učenja**: "backbone" modela treniran je sa sporijom stopom učenja nego "head". Također, u početnim fazama treniranja, težine "backbone"-a su bile "**zamrznute**" (nisu se ažurirale) kako bi se prvo prilagodio samo novododani "head".
 
-**Strategije učenja:**
+**Regularizacija:** U klasifikacijski "head" modela dodavane su tehnike regularizacije poput **Batch Normalization** i **Dropout** kako bi se dodatno smanjila prenaučenost.
 - Dinamičke stope učenja (OneCycleLR, Cosine Annealing)
-- Diferencijalne stope učenja
-- Zamrzavanje težina "backbone"-a u početnim fazama
 
 ## 4. Evaluacija
 
-Glavna metrika: **AUC ROC**
+Kvaliteta modela primarno je mjerena pomoću metrike **AUC ROC (Area Under the Receiver Operating Characteristic Curve)** na izdvojenom **testnom skupu podataka**, koji model nije vidio tijekom treniranja ili validacije. Praćenjem vrijednosti funkcije gubitka na skupu za treniranje i AUC metrike na validacijskom skupu (koji je korišten za dinamičko podešavanje stope učenja i rano zaustavljanje) nastojalo se balansirati između performansi i prenaučenosti.
 
-Postignuti rezultati:
-- Najbolji pojedinačni modeli: AUC ROC ~0.92
-- **Ansambl modela: AUC ROC = 0.935**
+## 5. Rezultati i Ključna Saznanja
 
-## 5. Zaključak
+- Najveći pomak u performansama postignut je implementacijom **višestrukog uzorkovanja (oversamplinga) malignih tumora** u kombinaciji s jakim augmentacijama. Bez toga, model je težio predviđati samo dominantnu (benignu) klasu, što je rezultiralo niskom vrijednošću funkcije gubitka, ali i niskim AUC ROC rezultatom.
+- Modeli trenirani s **dinamičkim rasporedom stope učenja**, poput ReduceLROnPlateau temeljenom na validacijskom AUC, pokazali su se uspješnima, no zahtijevali su pažljivo praćenje kako bi se izbjeglo prenaučavanje na validacijski skup. Korištenje diferencijalnih stopa učenja i početno zamrzavanje "backbone"-a također su doprinijeli stabilnosti treniranja.
+- Kao konačni korak, najbolji pojedinačni modeli kombinirani su u **ansambl model**. Isprobane su metode poput usrednjavanja predikcija, odabira najsigurnije predikcije i treniranja meta-modela (stacking) na izlazima pojedinačnih modela. (Potrebno je dodati koja se metoda pokazala najboljom).
+- Najbolji postignuti rezultat na testnom skupu, koristeći ansambl pristup, bio je **AUC ROC = 0.935**.
 
-Projekt je uspješno demonstrirao primjenu dubokog učenja za klasifikaciju tumora, postižući vrhunske rezultate (AUC ROC 0.935) kroz:
-- Pažljivu obradu neuravnoteženih podataka
-- Napredne tehnike augmentacije
-- Optimalan odabir modela i strategija učenja
-- Korištenje ansambl metoda
+## 6. Izazovi
+Glavni praktični izazov bio je **dugo trajanje treniranja** pojedinačnih modela, koje je često trajalo i više od jednog dana. Ovo je značajno usporilo proces iteranja kroz različite hiperparametre i arhitekture, zahtijevalo strpljenje i činilo svaku grešku u postavkama vremenski skupom.
+
+## 7. Zaključak
+
+Projekt je uspješno demonstrirao primjenu dubokog učenja i transfernog učenja na zahtjevnom medicinskom zadatku klasifikacije tumora iz DICOM slika. Kroz sustavnu primjenu tehnika poput oversamplinga neuravnoteženih klasa, intenzivne augmentacije podataka, pažljivog odabira funkcija gubitka, optimizatora (AdamW, SGD) i strategija učenja (ReduceLROnPlateau, diferencijalne stope učenja, zamrzavanje), te korištenjem ansambl metoda, postignut je visok rezultat od **0.935 AUC ROC** na testnom skupu. 

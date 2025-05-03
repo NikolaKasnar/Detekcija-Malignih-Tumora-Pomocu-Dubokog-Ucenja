@@ -43,7 +43,6 @@ Proces treniranja uključivao je pažljiv odabir hiperparametara i tehnika:
 **Optimizatori i Stopa Učenja (Learning Rate):** Eksperimentiralo se s različitim optimizatorima, uključujući **AdamW** i **SGD s momentumom**. Isprobane su različite strategije za prilagodbu stope učenja tijekom treniranja: konstanta stopa, **OneCycleLR**, **Cosine Annealing** i **ReduceLROnPlateau** (smanjenje stope učenja kada se metrika na validacijskom skupu prestane poboljšavati). Primijenjene su **diferencijalne stope učenja**: "backbone" modela treniran je sa sporijom stopom učenja nego "head". Također, u početnim fazama treniranja, težine "backbone"-a su bile "**zamrznute**" (nisu se ažurirale) kako bi se prvo prilagodio samo novododani "head".
 
 **Regularizacija:** U klasifikacijski "head" modela dodavane su tehnike regularizacije poput **Batch Normalization** i **Dropout** kako bi se dodatno smanjila prenaučenost.
-- Dinamičke stope učenja (OneCycleLR, Cosine Annealing)
 
 ## 4. Evaluacija
 
